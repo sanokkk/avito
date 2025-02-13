@@ -1,0 +1,1 @@
+connection_string: "postgres://admin:admax@postgres:5432/avito?sslmode=disable"

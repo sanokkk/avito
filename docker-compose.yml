@@ -1,0 +1,26 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - backend
+    depends_on:
+      - postgres
+    restart: unless-stopped
+  postgres:
+    image: postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admax
+      - POSTGRES_DB=avito
+    ports:
+      - "5432:5432"
+    networks:
+      - backend
+
+networks:
+  backend: 
