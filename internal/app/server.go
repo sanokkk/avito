@@ -12,8 +12,7 @@ import (
 )
 
 type UserHandler interface {
-	Register(c *fiber.Ctx) error
-	Login(c *fiber.Ctx) error
+	Auth(c *fiber.Ctx) error
 }
 
 type TransactionsHandler interface {
@@ -67,8 +66,7 @@ func (s *Server) Start() {
 func (s *Server) applyRoutes() {
 	apiRouter := fiber.New()
 
-	apiRouter.Post("/register", s.userHandler.Register)
-	apiRouter.Post("/auth", s.userHandler.Login)
+	apiRouter.Post("/auth", s.userHandler.Auth)
 	apiRouter.Get("/info", middleware.AuthMiddleware, s.transactionsHandler.GetInfo)
 	apiRouter.Post("/sendCoin", middleware.AuthMiddleware, s.sendCoinHandler.SendCoin)
 	apiRouter.Get("/buy/:item", middleware.AuthMiddleware, s.itemsHandler.Buy)

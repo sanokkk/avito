@@ -26,7 +26,7 @@ func NewUserHandler(db *pg.DB) *UserHandler {
 	}
 }
 
-func (h *UserHandler) Register(c *fiber.Ctx) error {
+func (h *UserHandler) Auth(c *fiber.Ctx) error {
 	log.Info("Получил запрос на регистрацию")
 
 	var request requests.RegisterDto
@@ -50,7 +50,7 @@ func (h *UserHandler) Register(c *fiber.Ctx) error {
 	}
 
 	if userToFind.Id != nil {
-		return RespondWithError(400, "Пользователь с таким юзернеймом уже существует", c)
+		return h.login(c, &userToFind, request.Password)
 	}
 
 	salt := hashing.GenerateRandomSalt(8)
@@ -78,38 +78,16 @@ func (h *UserHandler) Register(c *fiber.Ctx) error {
 	}{Token: token})
 }
 
-func (h *UserHandler) Login(c *fiber.Ctx) error {
-	log.Info("Получил запрос на аутентификацию")
-
-	var request requests.LoginDto
-	if err := c.BodyParser(&request); err != nil {
-		return RespondWithError(400, "Проблемы валидации", c)
-	}
-
-	validate = validator.New(validator.WithRequiredStructEnabled())
-	if err := validate.Struct(&request); err != nil {
-		log.Error(err)
-
-		return RespondWithError(400, "Проблемы валидации", c)
-	}
-
-	userToFind := models.User{}
-
-	if err := h.db.Model(&userToFind).Where("username = ?", request.Username).First(); err != nil {
-		return RespondWithError(400, "Неверный запрос", c)
-	}
-
-	if userToFind.Id == nil {
-		return RespondWithError(500, "Внутренняя ошибка сервера", c)
-	}
+func (h *UserHandler) login(c *fiber.Ctx, userToFind *models.User, password string) error {
+	log.Info("начинаю аутентификацию")
 
 	salt := userToFind.Salt
-	isPasswordCorrect := hashing.DoPasswordsMatch(userToFind.PasswordHash, request.Password, salt)
+	isPasswordCorrect := hashing.DoPasswordsMatch(userToFind.PasswordHash, password, salt)
 	if !isPasswordCorrect {
 		return RespondWithError(401, "Неавторизован", c)
 	}
 
-	token, err := tokens.CreateToken(request.Username, *userToFind.Id)
+	token, err := tokens.CreateToken(userToFind.Username, *userToFind.Id)
 	if err != nil {
 		return RespondWithError(500, "Ошибка создания токена", c)
 	}
@@ -117,10 +95,4 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 	return c.Status(200).JSON(struct {
 		Token string `json:"token"`
 	}{Token: token})
-}
-
-func (h *UserHandler) CheckAuth(c *fiber.Ctx) error {
-	log.Info("Получил запрос на auth")
-
-	return c.SendStatus(205)
 }
